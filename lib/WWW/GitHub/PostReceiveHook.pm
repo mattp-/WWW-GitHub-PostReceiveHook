@@ -3,7 +3,7 @@ use Web::Simple 'WWW::GitHub::PostReceiveHook';
     package WWW::GitHub::PostReceiveHook;
 
     use Try::Tiny;
-    use JSON::Any;
+    use JSON;
 
     has routes => (
         is        => 'rw',
@@ -34,22 +34,28 @@ use Web::Simple 'WWW::GitHub::PostReceiveHook';
             # catch the payload
             sub (%payload=) {
                 my ( $self, $payload ) = @_;
+                my $response;
 
                 try {
                     # deserialize
-                    my $json = JSON::Any->jsonToObj( $payload );
+                    my $json = decode_json $payload;
 
                     # callback
                     $self->routes->{ "/$path" }->( $json );
                 }
                 catch {
-                    warn "Exception: /$path: attempted to trigger callback but failed:\n$_";
+                    # malformed JSON string, neither array, object, number, string or atom, at character offset 0 ?
+                    # you are trying to POST non JSON data. don't do that.
+                    warn "Caught exception: /$path: attempted to trigger callback but failed:\n$_";
 
                     # override the default 200 OK
-                    return [ 400, [ 'Content-type' => 'text/plain' ], ['Bad Request'] ];
+                    $response = [ 400, [ 'Content-type' => 'text/plain' ], ['Bad Request'] ];
                 };
 
-                [ 200, [ 'Content-type' => 'text/plain' ], ['OK'] ];
+                # return catch response if set
+                return $response if $response;
+
+                $response = [ 200, [ 'Content-type' => 'text/plain' ], ['OK'] ];
             }
         },
     }
