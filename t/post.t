@@ -1,13 +1,17 @@
 use strict;
 use warnings FATAL => 'all';
 
-use Test::More (
-  eval { require HTTP::Request::AsCGI }
-    ? 'no_plan'
-    : (skip_all => 'No HTTP::Request::AsCGI')
-);
-
 use WWW::GitHub::PostReceiveHook;
+
+use Test::More;
+use Test::Warn;
+use Plack::Test;
+use Plack::Util;
+use HTTP::Request;
+use HTTP::Request::Common qw/POST GET/;
+use JSON;
+use FindBin qw($Bin);
+use Data::Dump;
 
 # create the server
 my $app = WWW::GitHub::PostReceiveHook->new(
@@ -15,37 +19,39 @@ my $app = WWW::GitHub::PostReceiveHook->new(
         '/hello' => sub {
             my ($payload) = @_;
 
-            use Data::Dump;
-            diag dd $payload;
+            is_deeply $payload, ['FOO'], 'payload deserialized correctly';
         },
         '/goodbye' => sub { print 'goodbye' },
     }
-);
+)->to_psgi_app;
 
-use HTTP::Request::Common qw(GET POST);
+test_psgi app => $app, client => sub {
+    my $client_cb = shift;
 
-sub run_request {
-    my $request = shift;
-    my $c       = HTTP::Request::AsCGI->new($request)->setup;
-    $app->run;
-    $c->restore;
-    return $c->response;
-}
+    my $request = HTTP::Request->new( GET => '/' );
+    my $response = $client_cb->($request);
+    is   $response->code,    404, '404 on root';
 
-my $get = run_request(GET 'http://localhost/');
-cmp_ok($get->code, '==', 404, '404 on GET');
+    $response = $client_cb->(POST '/' => [ bar => 'BAR' ]);
+    is $response->code, 404, '404 with empty body';
 
-my $no_body = run_request(POST 'http://localhost/');
-cmp_ok($no_body->code, '==', 404, '404 with empty body');
+    $response = $client_cb->(POST '/' => [ bar => 'BAR' ]);
+    is $response->code, 404, '404 with no payload param';
 
-my $no_payload_root = run_request(POST 'http://localhost/' => [ bar => 'BAR' ]);
-cmp_ok($no_payload_root->code, '==', 404, '404 with no payload param');
+    $response = $client_cb->(POST '/hello' => [ bar => 'BAR' ]);
+    is $response->code, 404, '404 with no payload param to app path';
 
-my $no_payload = run_request(POST 'http://localhost/hello' => [ bar => 'BAR' ]);
-cmp_ok($no_payload->code, '==', 404, '404 with no payload param to app path');
+    warning_like
+        { $response = $client_cb->(POST '/hello', { 'payload' => 'FOO'} ); }
+        qr{Caught exception: /hello},
+        'malformed JSON string picked up and warned';
 
-my $payload = run_request(POST 'http://localhost/hello', Content => [ 'payload' => 'FOO' ] );
-#cmp_ok($payload->code, '==', 200, '200 with payload param');
+    is $response->code, 400, '400 with payload param with unparsing json';
+    is $response->content, 'Bad Request', 'Bad Request returned';
 
-is($payload ->content, 'OK', 'OK statement returned');
+    $response = $client_cb->(POST '/hello', { 'payload' => '["FOO"]'} );
+    is $response->code, 200, '200 with payload param';
+    is $response->content, 'OK', 'OK returned on valid json';
+};
 
+done_testing();
