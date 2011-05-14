@@ -2,4 +2,6 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
 
+0.001     2011-05-13 23:39:33 America/Toronto
+
 - Initial release.
