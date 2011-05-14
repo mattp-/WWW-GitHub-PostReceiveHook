@@ -23,12 +23,6 @@ has routes => (
     },
 );
 
-=head2
-
-
-
-=cut
-
 sub dispatch_request {
 
     sub (POST + /*) {
@@ -70,31 +64,47 @@ sub dispatch_request {
 
 __END__
 
-=head1 Synposis
+=head1 SYNOPSIS
 
 Create the listener:
 
     use WWW::GitHub::PostReceiveHook;
 
-    my $s = WWW::GitHub::PostReceiveHook->new(
+    WWW::GitHub::PostReceiveHook->new(
         routes => {
-            '/myProject' => sub { print 'hello' },
+            '/myProject' => sub { my $payload = shift; },
             '/myOtherProject' => sub { run3 \@cmd ... }
         }
     )->run_if_script;
 
-Save it. Toss it in /cgi-bin or mount it as a psgi app.
+Save it. Toss it in /cgi-bin or mount it as a psgi app. Add http://your.host/myProject to github.com/myname/myproject/admin/hooks.
 
-=head1 Why WWW::GitHub::PostReceiveHook?
+=head1 DESCRIPTION
+
+WWW::GitHub::PostReceiveHook is a CGI / PSGI wrapper for GitHub that tries to be simple like a local git hook.
+
+=method new
+
+Argument: routes => HashRef[CodeRef]
+
+Sets up L<Web::Simple> to listen on each route. If a GitHub payload is POST'd to a given path, it will be deserialized and passed to that paths callback.
+
+=cut
+
+=head1 QUESTIONS
+
+=head2 Why WWW::GitHub::PostReceiveHook?
 
 Sometimes you just want to kick off an email, or run a small script when someone commits to github. In situations like these, busting out a full-sized framework like Dancer/Catalyst is almost always overkill to listen for GitHub's postreceive hooks. Use this module and you can be off to the races after a quick copy-paste.
 
-=head1 Can't I do this just as easily using Web::Simple?
+=head2 Can't I do this just as easily using Web::Simple?
 
 Yes! But most people searching cpan for 'github postreceive' probably haven't heard of Web::Simple.
 
 =head1 SEE ALSO
 
+L<http://help.github.com/post-receive-hooks/> for details on what gets POST'd by GitHub
+
 WWW::GitHub::PostReceiveHook uses L<Web::Simple> to do the heaving lifting, so that would be a good start.
 
-L<Web::Simple>, L<Dancer>, L<Catalyst>, L<CGI>
+L<Dancer>, L<Catalyst>, L<CGI>
