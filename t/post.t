@@ -6,12 +6,8 @@ use WWW::GitHub::PostReceiveHook;
 use Test::More;
 use Test::Warn;
 use Plack::Test;
-use Plack::Util;
-use HTTP::Request;
 use HTTP::Request::Common qw/POST GET/;
 use JSON;
-use FindBin qw($Bin);
-use Data::Dump;
 
 # create the server
 my $app = WWW::GitHub::PostReceiveHook->new(
