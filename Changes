@@ -2,8 +2,8 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
 
-- Added 0.008 minimum version to Web::Simple.
+    - Added 0.008 minimum version to Web::Simple.
 
 0.001     2011-05-13 23:39:33 America/Toronto
 
-- Initial release.
+    - Initial release.
