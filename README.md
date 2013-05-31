@@ -25,7 +25,7 @@ WWW::GitHub::PostReceiveHook is a CGI / PSGI wrapper for GitHub that tries to be
 
 ## new
 
-Argument: routes => HashRef[CodeRef]
+Argument: routes => HashRef\[CodeRef\]
 
 Sets up [Web::Simple](http://search.cpan.org/perldoc?Web::Simple) to listen on each route. If a GitHub payload is POST'd to a given path, it will be deserialized and passed to that paths callback.
 
