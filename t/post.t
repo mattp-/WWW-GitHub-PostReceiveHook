@@ -8,6 +8,7 @@ use Test::Warn;
 use Plack::Test;
 use HTTP::Request::Common qw/POST GET/;
 use JSON;
+use Encode;
 
 # create the server
 my $app = WWW::GitHub::PostReceiveHook->new(
@@ -16,6 +17,12 @@ my $app = WWW::GitHub::PostReceiveHook->new(
             my ($payload) = @_;
 
             is_deeply $payload, ['FOO'], 'payload deserialized correctly';
+        },
+        '/multibyte' => sub {
+            my ($payload) = @_;
+
+            is_deeply $payload, [ decode_utf8 '忍者' ],
+                'encode multibyte and payload deserialized correctly';
         },
         '/goodbye' => sub { print 'goodbye' },
     }
@@ -46,6 +53,10 @@ test_psgi app => $app, client => sub {
     is $response->content, 'Bad Request', 'Bad Request returned';
 
     $response = $client_cb->(POST '/hello', { 'payload' => '["FOO"]'} );
+    is $response->code, 200, '200 with payload param';
+    is $response->content, 'OK', 'OK returned on valid json';
+
+    $response = $client_cb->(POST '/multibyte', { 'payload' => '["忍者"]'} );
     is $response->code, 200, '200 with payload param';
     is $response->content, 'OK', 'OK returned on valid json';
 };
