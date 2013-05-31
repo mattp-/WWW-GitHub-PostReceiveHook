@@ -4,6 +4,7 @@ package WWW::GitHub::PostReceiveHook;
 
 use Try::Tiny;
 use JSON;
+use Encode;
 
 has routes => (
     is        => 'rw',
@@ -37,6 +38,9 @@ sub dispatch_request {
             my $response;
 
             try {
+                # encode multibyte
+                $payload = encode_utf8 $payload;
+
                 # deserialize
                 my $json = decode_json $payload;
 
